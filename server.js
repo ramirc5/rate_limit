@@ -1,17 +1,19 @@
 const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const { buildSchema } = require('graphql');
+const { Octokit } = require('@octokit/core');
 
 const schema = buildSchema(`
   type Query {
-    rateLimit: Int
+    rateLimit(token: String!): Int
   }
 `);
 
 const rootValue = {
-  rateLimit: () => {
-    // Insert code to check the rate limit here
-    return 100; // For example, return a fixed rate limit of 100
+  rateLimit: async ({ token }) => {
+    const octokit = new Octokit({ auth: token });
+    const response = await octokit.request('GET /rate_limit');
+    return response.data.rate.remaining;
   },
 };
 
@@ -20,7 +22,7 @@ const app = express();
 app.use('/graphql', graphqlHTTP({
   schema: schema,
   rootValue: rootValue,
-  graphiql: true, // Optional: enable the GraphiQL UI for testing the API
+  graphiql: true,
 }));
 
 app.listen(4006, () => {
